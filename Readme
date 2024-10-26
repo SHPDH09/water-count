@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Water Bottle Billing System</title>
+    <style>
+        /* Background styles */
+        body {
+            font-family: Arial, sans-serif;
+            background-image: url('https://images.unsplash.com/photo-1519681393784-d120267933ba?ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&ixlib=rb-1.2.1&auto=format&fit=crop&w=1124&q=100');
+            background-position: center;
+            background-size: cover;
+            text-align: center;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        /* Glassmorphism form effect */
+        form {
+            backdrop-filter: blur(8px) saturate(200%);
+            -webkit-backdrop-filter: blur(8px) saturate(200%);
+            background-color: rgba(56, 89, 151, 0.06);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.125);
+            padding: 20px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            display: inline-block;
+            color: white;
+        }
+
+        label {
+            display: block;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+
+        input {
+            margin: 5px;
+        }
+
+        button {
+            margin: 10px 5px;
+            padding: 10px 15px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        #billOutput {
+            margin-top: 20px;
+        }
+
+        #resetButton {
+            display: none; /* Hide reset button by default */
+        }
+    </style>
+</head>
+<body>
+    <h1>Water Bottle Billing System</h1>
+
+    <form id="bottleForm">
+        <label for="date">Date:</label>
+        <input type="date" id="date" required><br><br>
+
+        <label for="quantity">Quantity (No. of bottles):</label>
+        <input type="number" id="quantity" min="1" required><br><br>
+
+        <label for="price">Price per bottle:</label>
+        <input type="number" id="price" value="30" readonly><br><br>
+
+        <button type="button" onclick="generateBill()">Generate Bill</button>
+        <button type="button" onclick="openList()">Show List</button>
+        <button id="resetButton" type="button" onclick="resetMonthlyData()">Reset Monthly Data</button>
+        <button id="printButton" type="button" onclick="printList()">Print List</button>
+    </form>
+
+    <div id="billOutput"></div>
+
+    <script>
+        // Function to generate the bill and save data to localStorage
+        function generateBill() {
+            const date = document.getElementById("date").value;
+            const quantity = document.getElementById("quantity").value;
+            const price = document.getElementById("price").value;
+            const total = quantity * price;
+
+            if (date && quantity) {
+                const bottleData = {
+                    date: date,
+                    quantity: quantity,
+                    totalAmount: total
+                };
+
+                // Save to localStorage
+                let existingData = JSON.parse(localStorage.getItem("bottleList")) || [];
+                existingData.push(bottleData);
+                localStorage.setItem("bottleList", JSON.stringify(existingData));
+
+                document.getElementById("billOutput").innerHTML = 
+                    `<h3>Bill Generated</h3>
+                     <p>Date: ${date}</p>
+                     <p>Quantity: ${quantity} bottles</p>
+                     <p>Total Amount: ₹${total}</p>`;
+            } else {
+                alert("Please fill out the form.");
+            }
+        }
+
+        // Function to open a new window with the list of all bills
+        function openList() {
+            const bottleList = JSON.parse(localStorage.getItem("bottleList")) || [];
+            let newWindow = window.open("", "", "width=800,height=600");
+            newWindow.document.write("<h1>Water Bottle Bill List</h1>");
+
+            if (bottleList.length === 0) {
+                newWindow.document.write("<p>No data available</p>");
+            } else {
+                let totalBottles = 0;
+                let totalAmount = 0;
+
+                newWindow.document.write("<table border='1'><tr><th>Date</th><th>Quantity</th><th>Total Amount</th><th>Actions</th></tr>");
+                bottleList.forEach((item, index) => {
+                    totalBottles += parseInt(item.quantity);
+                    totalAmount += parseInt(item.totalAmount);
+
+                    newWindow.document.write(`
+                        <tr>
+                            <td><input type="date" value="${item.date}" id="editDate${index}"></td>
+                            <td><input type="number" value="${item.quantity}" id="editQuantity${index}"></td>
+                            <td>₹<span id="totalAmount${index}">${item.totalAmount}</span></td>
+                            <td>
+                                <button onclick="updateRow(${index})">Edit</button>
+                                <button onclick="deleteRow(${index})">Delete</button>
+                            </td>
+                        </tr>
+                    `);
+                });
+                newWindow.document.write(`
+                    <tr>
+                        <td colspan="2"><strong>Total Bottles:</strong></td>
+                        <td colspan="2"><strong>${totalBottles} bottles</strong></td>
+                    </tr>
+                    <tr>
+                        <td colspan="2"><strong>Total Amount:</strong></td>
+                        <td colspan="2"><strong>₹${totalAmount}</strong></td>
+                    </tr>
+                `);
+                newWindow.document.write("</table>");
+            }
+
+            // Adding the JavaScript to handle updates and deletions
+            newWindow.document.write(`
+                <script>
+                    function updateRow(index) {
+                        const newDate = document.getElementById('editDate' + index).value;
+                        const newQuantity = document.getElementById('editQuantity' + index).value;
+                        const pricePerBottle = 30;
+                        const newTotalAmount = newQuantity * pricePerBottle;
+
+                        let bottleList = JSON.parse(localStorage.getItem('bottleList')) || [];
+                        bottleList[index].date = newDate;
+                        bottleList[index].quantity = newQuantity;
+                        bottleList[index].totalAmount = newTotalAmount;
+
+                        localStorage.setItem('bottleList', JSON.stringify(bottleList));
+
+                        document.getElementById('totalAmount' + index).textContent = newTotalAmount;
+                        alert('Data updated successfully!');
+                    }
+
+                    function deleteRow(index) {
+                        let bottleList = JSON.parse(localStorage.getItem('bottleList')) || [];
+                        bottleList.splice(index, 1);
+                        localStorage.setItem('bottleList', JSON.stringify(bottleList));
+
+                        window.location.reload(); // Reload the window to reflect changes
+                    }
+                <\/script>
+            `);
+        }
+
+        // Function to check if the reset button should be enabled
+        function checkResetButton() {
+            const currentDate = new Date();
+            const currentDay = currentDate.getDate();
+
+            // Show the reset button only on the first day of the month
+            if (currentDay === 1) {
+                document.getElementById("resetButton").style.display = "inline-block";
+            } else {
+                document.getElementById("resetButton").style.display = "none";
+            }
+        }
+
+        // Function to reset the monthly data
+        function resetMonthlyData() {
+            localStorage.removeItem("bottleList");
+            const currentDate = new Date();
+            localStorage.setItem("lastResetDate", currentDate);
+
+            alert("Monthly data has been reset.");
+            checkResetButton();  // Recheck to hide the button after reset
+        }
+
+        // Function to print the list
+        function printList() {
+            const bottleList = JSON.parse(localStorage.getItem("bottleList")) || [];
+            let printWindow = window.open("", "", "width=800,height=600");
+            printWindow.document.write("<h1>Water Bottle Bill List</h1>");
+
+            if (bottleList.length === 0) {
+                printWindow.document.write("<p>No data available to print</p>");
+            } else {
+                let totalBottles = 0;
+                let totalAmount = 0;
+
+                printWindow.document.write("<table border='1'><tr><th>Date</th><th>Quantity</th><th>Total Amount</th></tr>");
+                bottleList.forEach((item) => {
+                    totalBottles += parseInt(item.quantity);
+                    totalAmount += parseInt(item.totalAmount);
+                    printWindow.document.write(`
+                        <tr>
+                            <td>${item.date}</td>
+                            <td>${item.quantity} bottles</td>
+                            <td>₹${item.totalAmount}</td>
+                        </tr>
+                    `);
+                });
+                printWindow.document.write(`
+                    <tr>
+                        <td colspan="2"><strong>Total Bottles:</strong></td>
+                        <td><strong>${totalBottles} bottles</strong></td>
+                    </tr>
+                    <tr>
+                        <td colspan="2"><strong>Total Amount:</strong></td>
+                        <td><strong>₹${totalAmount}</strong></td>
+                    </tr>
+                `);
+                printWindow.document.write("</table>");
+            }
+
+            printWindow.print();  // Automatically open the print dialog
+        }
+
+        // Call this function when the page loads to check the reset button status
+        checkResetButton();
+    </script>
+</body>
+</html>
